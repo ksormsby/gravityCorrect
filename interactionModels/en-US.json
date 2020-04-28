@@ -1,0 +1,182 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "gravity correct",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "GravityIntent",
+                    "slots": [
+                        {
+                            "name": "gravity",
+                            "type": "AMAZON.NUMBER",
+                            "samples": [
+                                "{gravity}",
+                                "gravity is {gravity}"
+                            ]
+                        },
+                        {
+                            "name": "temperature",
+                            "type": "AMAZON.NUMBER"
+                        },
+                        {
+                            "name": "calibration",
+                            "type": "AMAZON.NUMBER"
+                        }
+                    ],
+                    "samples": [
+                        "gravity is {gravity}"
+                    ]
+                },
+                {
+                    "name": "CalibrateIntent",
+                    "slots": [
+                        {
+                            "name": "caliDefault",
+                            "type": "YesOrNumber",
+                            "samples": [
+                                "{caliDefault}"
+                            ]
+                        }
+                    ],
+                    "samples": []
+                }
+            ],
+            "types": [
+                {
+                    "name": "YesOrNumber",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "yeah"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "ok"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "alright"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "yes please"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "please"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "okay"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "yep"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "yes"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "GravityIntent",
+                    "delegationStrategy": "SKILL_RESPONSE",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "gravity",
+                            "type": "AMAZON.NUMBER",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1387585344188.1090549243568"
+                            }
+                        },
+                        {
+                            "name": "temperature",
+                            "type": "AMAZON.NUMBER",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "calibration",
+                            "type": "AMAZON.NUMBER",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        }
+                    ]
+                },
+                {
+                    "name": "CalibrateIntent",
+                    "delegationStrategy": "SKILL_RESPONSE",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "caliDefault",
+                            "type": "YesOrNumber",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1332540403997.1524179909927"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "SKILL_RESPONSE"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1387585344188.1090549243568",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Okay, what is your gravity reading?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1332540403997.1524179909927",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Do you want to use the default calibration temperature of {caliDefault} ?"
+                    }
+                ]
+            }
+        ]
+    }
+}
