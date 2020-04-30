@@ -40,6 +40,8 @@ class sgCase(object):
         elif argLen == 4:
             result['first'] = argString[0: 2:]
             result['second'] = argString[2: 4:]
+        else:
+            result['first'] = "0"
             
         return result
 # end of sgCase class    

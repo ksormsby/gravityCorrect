@@ -5,7 +5,7 @@ SKILL_TITLE = "Hydrometer Correction Skill"
 WELCOME_MESSAGE = ("Welcome to the hydrometer correction skill.  "
                    "You can say things like, 'gravity is ten fifty.' ")
 
-CARD_WELCOME = ("Welcome to the Hydrometer Correction Skill. ")
+CARD_WELCOME = "Welcome to the Hydrometer Correction Skill. "
 
 EXIT_SKILL_MESSAGE = "Thank you for using the hydrometer correction skill. "
 
@@ -21,5 +21,4 @@ TEMPERATURE_MESSAGES = {1: "Okay, gravity is {}. What was the temperature of the
 
 CALIBRATE_MESSAGES = {1: "Okay, I have a measured gravity of {} at {} degrees. What is your hydrometer's calibration temperature? ", 2: "Please refer to your hydrometer's documentation and tell me its calibration temperature. ", 3: "I can only handle temperature readings between 32 and 120 degrees Farenheit or between 0 and 49 degrees Celsius. You told me {}. Please say a calibration temperature within the valid range."}
 
-FALLBACK_ANSWER = (
-    "Sorry. I can't help you with that. {}".format(HELP_MESSAGE))
+FALLBACK_ANSWER = f"Sorry. I can't help you with that. {HELP_MESSAGE}"

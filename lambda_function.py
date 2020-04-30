@@ -7,7 +7,6 @@ import boto3
 from ask_sdk_s3.adapter import S3Adapter
 
 # Set up the bucket adapter so that we can interact with the repository
-# TODO: Figure out if each user gets his/her own file within this bucket. May need to modify the path_prefix?
 bucket_name = "gravresponse"
 s3_client = boto3.client('s3', config=boto3.session.Config(signature_version='s3v4',s3={'addressing_style': 'path'}))
 s3_adapter = S3Adapter(bucket_name=bucket_name, path_prefix=None, s3_client=s3_client)
@@ -52,7 +51,7 @@ class LaunchRequestHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         # Indicate can handle Launch requests
-        logger.info("In LaunchRequestHandler.can_handle request is {} ".format(handler_input.request_envelope.request))
+        logger.info(f"In LaunchRequestHandler.can_handle request is {handler_input.request_envelope.request} ")
         return is_request_type("LaunchRequest")(handler_input)
 
     def handle(self, handler_input):
@@ -75,8 +74,7 @@ class SessionEndedRequestHandler(AbstractRequestHandler):
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
         logger.info("In SessionEndedRequestHandler")
-        print("Session ended with reason: {}".format(
-            handler_input.request_envelope))
+        print(f"Session ended with reason: {handler_input.request_envelope}")
         return handler_input.response_builder.response
 
 
@@ -95,11 +93,11 @@ class HelpIntentHandler(AbstractRequestHandler):
         
         # extract our saved values from the S3 repository
         savedAttrs = handler_input.attributes_manager.persistent_attributes
-        logger.info("In HelpIntentHandler: savedAttrs is {}. ".format(savedAttrs))
+        logger.info(f"In HelpIntentHandler: savedAttrs is {savedAttrs}. ")
         
         # Get any slot values from the user
         slots = handler_input.request_envelope.request.intent.slots
-        logger.info("In HelpIntentHandler: slots={}".format(slots))
+        logger.info(f"In HelpIntentHandler: slots={slots} ")
         
         handler_input.response_builder.speak(
             data.HELP_MESSAGE).ask(data.HELP_MESSAGE).set_card(
@@ -135,58 +133,39 @@ class GravityIntentHandler(AbstractRequestHandler):
         """Handler for Processing the gravity correction"""
         # Create an Intent object for GravityIntent
         gravIntent = handler_input.request_envelope.request.intent
-        logger.info("In GravityIntentHandler: gravIntent is {}. ".format(gravIntent))
+        logger.info(f"In GravityIntentHandler: gravIntent is {gravIntent}. ")
         
         # Obtain the request object
         request = handler_input.request_envelope.request
         
         # Get any slot values from the user
         slots = handler_input.request_envelope.request.intent.slots
-        logger.info("In GravityIntentHandler: slots={}".format(slots))
+        logger.info(f"In GravityIntentHandler: slots={slots}")
         
         # extract slot values
         gravity = slots["gravity"].value
         temp = slots["temperature"].value
         calTemp = slots["calibration"].value
-        logger.info("In GravityIntentHandler: gravity is {} and temp {}".format(gravity, temp))
+        logger.info(f"In GravityIntentHandler: gravity is {gravity} and temp {temp}")
         
         # extract any saved values from the S3 repository
         savedAttrs = handler_input.attributes_manager.persistent_attributes
-        try:
-            defaultAsked = savedAttrs["defaultAsked"]
-        except:
-            defaultAsked = False
-            
-        # In an effort to vary the user experience, keep track of the number of times we have asked for gravity
+        defaultAsked = savedAttrs.get('defaultAsked', False)
+        
+        # In an effort to vary the user experience, keep track of the number of times we have asked for a slot
         # so that we can escalate our responses
-        try:
-            gravityAsked = savedAttrs["gravityAsked"]
-        except:
-            gravityAsked = 0
-            
-        # In an effort to vary the user experience, keep track of the number of times we have asked for temperature
-        # so that we can escalate our responses
-        try:
-            tempAsked = savedAttrs["tempAsked"]
-        except:
-            tempAsked = 0
-            
-        # In an effort to vary the user experience, keep track of the number of times we have asked for calibration
-        # so that we can escalate our responses
-        try:
-            caliAsked = savedAttrs["caliAsked"]
-        except:
-            caliAsked = 0
-            
-        logger.info("In GravityIntentHandler: gravityAsked is {}, tempAsked {}, and caliAsked {}".format(
-            gravityAsked, tempAsked, caliAsked))
+        gravityAsked = savedAttrs.get('gravityAsked', 0)
+        tempAsked = savedAttrs.get('tempAsked', 0)
+        caliAsked = savedAttrs.get('caliAsked', 0)
+        
+        logger.info(f"In GravityIntentHandler: gravityAsked is {gravityAsked}, tempAsked {tempAsked}, and caliAsked {caliAsked}")
         
         # See if we have a default calibration temperature
-        try:
-            savedCalibration = savedAttrs["calibration"]
-            calDefault = True
-        except:
+        savedCalibration = savedAttrs.get('calibration', 0)
+        if savedCalibration == 0:
             calDefault = False
+        else:
+            calDefault = True
         
         try:
             gravityFloat = float(gravity)
@@ -197,12 +176,13 @@ class GravityIntentHandler(AbstractRequestHandler):
             
             if gravityAsked >= 3:
                 gravityAsked = 0
+            
             savedAttrs['gravityAsked'] = gravityAsked
             handler_input.attributes_manager.persistent_attributes = savedAttrs
             handler_input.attributes_manager.save_persistent_attributes()
             
             handler_input.response_builder.speak(speech).ask(reprompt)
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "gravity", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="gravity", updated_intent=gravIntent))
             handler_input.response_builder.set_should_end_session(False)
             return handler_input.response_builder.response
             
@@ -223,13 +203,13 @@ class GravityIntentHandler(AbstractRequestHandler):
             handler_input.attributes_manager.save_persistent_attributes()
 
             handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False)
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "temperature", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="temperature", updated_intent=gravIntent))
             return handler_input.response_builder.response
         
         # Try to use a specified calibration temperature.
         # if there is none, try to use a saved calibration temperature.
         # if that fails, ask the user for a calibration temperature
-        logger.info("in GravityIntentHandler: calTemp is {} and calDefault is {} ".format(calTemp, calDefault))
+        logger.info(f"in GravityIntentHandler: calTemp is {calTemp} and calDefault is {calDefault}")
 
         # If we have not yet asked about the calibration temperature, delegate control to the Calibrate Intent
         if not defaultAsked and calDefault:
@@ -241,9 +221,9 @@ class GravityIntentHandler(AbstractRequestHandler):
             handler_input.attributes_manager.save_persistent_attributes()
             
             # build an Intent object for CalibrateIntent
-            calIntent = Intent(name = "CalibrateIntent")
+            calIntent = Intent(name="CalibrateIntent")
             calSlots = {}
-            calSlot = Slot(name = "caliDefault", value = savedCalibration)
+            calSlot = Slot(name="caliDefault", value=savedCalibration)
             calSlots[calSlot.name] = {
                         'confirmation_status': calSlot.confirmation_status,
                         'name': calSlot.name,
@@ -252,8 +232,8 @@ class GravityIntentHandler(AbstractRequestHandler):
             calIntent.slots = calSlots
             
             # Delegate CalibrateIntent
-            logger.info("in GravityIntentHandler: about to delegate CalibrateIntent. Intent is {} ".format(calIntent))
-            handler_input.response_builder.add_directive(DelegateDirective(updated_intent = calIntent))
+            logger.info(f"in GravityIntentHandler: about to delegate CalibrateIntent. Intent is {calIntent} ")
+            handler_input.response_builder.add_directive(DelegateDirective(updated_intent=calIntent))
             return handler_input.response_builder.response
         # end of "if not defaultAsked:"
         
@@ -262,7 +242,7 @@ class GravityIntentHandler(AbstractRequestHandler):
         except:
             caliAsked += 1
             speech = data.CALIBRATE_MESSAGES[caliAsked].format(
-                util.saySpecificGravity(gravity), temp)
+            util.saySpecificGravity(gravity), temp)
             reprompt = "You can say something like, '60'"
             
             if caliAsked >= 3:
@@ -271,23 +251,16 @@ class GravityIntentHandler(AbstractRequestHandler):
             handler_input.attributes_manager.persistent_attributes = savedAttrs
             handler_input.attributes_manager.save_persistent_attributes()
             
-#            cardText = "Okay, I have a measured gravity of {} at {} degrees. What is your hydrometer's calibration temperature. ".format(
-#                gravityFloat, temp)
-#            handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
-#                SimpleCard(data.SKILL_TITLE, cardText))
             handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False)
             
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "calibration", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="calibration", updated_intent=gravIntent))
             return handler_input.response_builder.response
         
         if util.validateSG(gravityFloat) == 0:
             speech = data.GRAVITY_MESSAGES[3].format(gravity)
             reprompt = "Please enter a valid specific gravity. "
-#            cardText = "Please enter a valid gravity. "
-#            handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
-#                SimpleCard(data.SKILL_TITLE, cardText))
             handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False)
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "gravity", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="gravity", updated_intent=gravIntent))
             return handler_input.response_builder.response
             
         tempFloat = util.validateTemp(tempFloat)
@@ -296,21 +269,15 @@ class GravityIntentHandler(AbstractRequestHandler):
         if tempFloat == 0:
             speech = data.TEMPERATURE_MESSAGES[3].format(temp)
             reprompt = "Please enter a valid temperature. "
-#            cardText = "Please enter a valid temperature. "
-#            handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
-#                SimpleCard(data.SKILL_TITLE, cardText))
             handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False)
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "temperature", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="temperature", updated_intent=gravIntent))
             return handler_input.response_builder.response
             
         if calTempFloat == 0:
             speech = data.CALIBRATE_MESSAGES[3].format(calTemp)
             reprompt = "Please enter a valid calibration temperature. "
-#            cardText = "Please enter a valid calibration temperature. "
-#            handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
-#                SimpleCard(data.SKILL_TITLE, cardText))
             handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False)
-            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "calibration", updated_intent = gravIntent))
+            handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit="calibration", updated_intent=gravIntent))
             return handler_input.response_builder.response
         
         # We have all the validated values, save them in the S3 repository
@@ -331,11 +298,11 @@ class GravityIntentHandler(AbstractRequestHandler):
         
         corrGravity = gravityFloat * (numeratorValue / denominatorValue)
         
-        logger.info("In GravityIntentHandler: corrected gravity is {}. ".format(corrGravity))
+        logger.info(f"In GravityIntentHandler: corrected gravity is {corrGravity}. ")
         
-        speech = "your corrected gravity is {}. ".format(util.saySpecificGravity(round(corrGravity)))
+        speech = f"your corrected gravity is {util.saySpecificGravity(round(corrGravity))}. "
         speech += data.EXIT_SKILL_MESSAGE
-        cardText = "your corrected gravity is {}. ".format((round(corrGravity)*0.001))
+        cardText = f"your corrected gravity is {int(round(corrGravity))*0.001}."
         
         handler_input.response_builder.speak(speech).set_should_end_session(True).set_card(
             SimpleCard(data.SKILL_TITLE, cardText))
@@ -346,30 +313,27 @@ class CalibrateIntentHandler(AbstractRequestHandler):
     """Determine if this is a Calibration value Intent request"""
     def can_handle(self, handler_input):
         # attr = handler_input.request_envelope.request.intent.slots
-        logger.info("In CalibrateIntentHandler.can_handle request is {} ".format(handler_input.request_envelope.request))
+        logger.info(f"In CalibrateIntentHandler.can_handle request is {handler_input.request_envelope.request} ")
         return is_intent_name("CalibrateIntent")(handler_input)
 
     def handle(self, handler_input):
         """Handler for Processing a saved calibration value"""
         # save our current Intent so we can get back here if we have to
         calIntent = handler_input.request_envelope.request.intent
-        logger.info("In CalibrateIntentHandler: calIntent is {}. ".format(calIntent))
+        logger.info(f"In CalibrateIntentHandler: calIntent is {calIntent}. ")
         
         # Create a GravityIntent object so we can get back to the GravityIntentHandler
-        gravIntent = Intent(name = "GravityIntent")
+        gravIntent = Intent(name="GravityIntent")
         
         # extract our saved values from the S3 repository
         savedAttrs = handler_input.attributes_manager.persistent_attributes
-        logger.info("In CalibrateIntentHandler: savedAttrs is {}. ".format(savedAttrs))
-        try:
-            defaultAsked = savedAttrs['defaultAsked']
-        except:
-            # Something is wrong here, just assume we did not ask if the user wants the default
-            defaultAsked = False
+        logger.info(f"In CalibrateIntentHandler: savedAttrs is {savedAttrs}.")
+        
+        defaultAsked = savedAttrs.get('defaultAsked', False)
         
         # Get any slot values from the user
         slots = handler_input.request_envelope.request.intent.slots
-        logger.info("In CalibrateIntentHandler: slots={}".format(slots))
+        logger.info(f"In CalibrateIntentHandler: slots={slots}")
         
         # if we have a slot, get its value
         if slots:
@@ -387,7 +351,7 @@ class CalibrateIntentHandler(AbstractRequestHandler):
                 savedAttrs['calibration'] = calTemp             # return the new calibration in GravityIntent's slot
                 gravSlots = {}
                 for name, value in savedAttrs.items():
-                    gravSlot = Slot(name = name, value = value)
+                    gravSlot = Slot(name=name, value=value)
                     if name == "gravity" or name == "temperature" or name == "calibration":
                         gravSlots[gravSlot.name] = {
                             'confirmation_status': gravSlot.confirmation_status,
@@ -395,8 +359,8 @@ class CalibrateIntentHandler(AbstractRequestHandler):
                             'resolutions': gravSlot.resolutions,
                             'value': gravSlot.value}
                 gravIntent.slots = gravSlots
-                logger.info("In CalibrateIntentHandler: Returning new calibration to {}. ". format(gravIntent))
-                handler_input.response_builder.add_directive(DelegateDirective(updated_intent = gravIntent))
+                logger.info(f"In CalibrateIntentHandler: Returning new calibration to {gravIntent}. ")
+                handler_input.response_builder.add_directive(DelegateDirective(updated_intent=gravIntent))
                 return handler_input.response_builder.response
             except:
                 # This intent's slot was not a number. If it is some form of agreement, pass the save calibration back to GravityIntent
@@ -406,7 +370,7 @@ class CalibrateIntentHandler(AbstractRequestHandler):
                 if userResponse == StatusCode.ER_SUCCESS_MATCH:
                     gravSlots = {}
                     for name, value in savedAttrs.items():
-                        gravSlot = Slot(name = name, value = value)
+                        gravSlot = Slot(name=name, value=value)
                         if name == "gravity" or name == "temperature" or name == "calibration":
                             gravSlots[gravSlot.name] = {
                                 'confirmation_status': gravSlot.confirmation_status,
@@ -414,16 +378,18 @@ class CalibrateIntentHandler(AbstractRequestHandler):
                                 'resolutions': gravSlot.resolutions,
                                 'value': gravSlot.value}
                     gravIntent.slots = gravSlots
-                    logger.info("In CalibrateIntentHandler: Using default calibration to {}. ". format(gravIntent))
-                    handler_input.response_builder.add_directive(DelegateDirective(updated_intent = gravIntent))
+                    logger.info(f"In CalibrateIntentHandler: Using default calibration to {gravIntent}.")
+                    handler_input.response_builder.add_directive(
+                        DelegateDirective(updated_intent=gravIntent))
                     return handler_input.response_builder.response
                 else:
                     # Otherwise, try to get something we understand
-                    speech = "Sorry, you said {}. Please reply with a new calibration temperature or reply 'yes' to use the default.".format(calTemp)
+                    speech = f"Sorry, you said {calTemp}. Please reply with a new calibration temperature or reply 'yes' to use the default."
                     reprompt = "Please say 'yes' or reply with a new calibration temperature."
                     handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
                         SimpleCard(data.SKILL_TITLE, reprompt))
-                    handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "caliDefault", updated_intent = calIntent))
+                    handler_input.response_builder.add_directive(
+                        ElicitSlotDirective(slot_to_elicit="caliDefault", updated_intent=calIntent))
                     return handler_input.response_builder.response
         
         # At this point, we haven't ask the user anything
@@ -433,11 +399,13 @@ class CalibrateIntentHandler(AbstractRequestHandler):
         handler_input.attributes_manager.save_persistent_attributes()
         
         # Ask the user to confirm the default or provide a new calibration temperature
-        speech = "You have a default calibration temperature of {}. Do you want to use the default? ".format(calTemp)
+        speech = f"You have a default calibration temperature of {calTemp}. Do you want to use the default?"
         reprompt = "Please say 'yes' or reply with a new calibration temperature."
         handler_input.response_builder.speak(speech).ask(reprompt).set_should_end_session(False).set_card(
         SimpleCard(data.SKILL_TITLE, reprompt))
-        handler_input.response_builder.add_directive(ElicitSlotDirective(slot_to_elicit = "caliDefault", updated_intent = calIntent))
+        handler_input.response_builder.add_directive(
+            ElicitSlotDirective(
+                slot_to_elicit="caliDefault", updated_intent=calIntent))
         return handler_input.response_builder.response
         
 class RepeatHandler(AbstractRequestHandler):
