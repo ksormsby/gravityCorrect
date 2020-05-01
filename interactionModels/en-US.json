@@ -32,7 +32,11 @@
                         },
                         {
                             "name": "temperature",
-                            "type": "AMAZON.NUMBER"
+                            "type": "AMAZON.NUMBER",
+                            "samples": [
+                                "{temperature}",
+                                "{temperature} degrees"
+                            ]
                         },
                         {
                             "name": "calibration",
@@ -50,7 +54,8 @@
                             "name": "caliDefault",
                             "type": "YesOrNumber",
                             "samples": [
-                                "{caliDefault}"
+                                "{caliDefault}",
+                                "{caliDefault} degrees"
                             ]
                         }
                     ],
